@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "772715593387",
+    "project_id": "todo-app-44484",
+    "storage_bucket": "todo-app-44484.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:772715593387:android:2d8625e3d7ae83d6cf81ee",
+        "android_client_info": {
+          "package_name": "com.example.sqflite_login_app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDpbM9TkA96G852dV_hF5EFKv5q4lqfuDY"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

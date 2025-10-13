@@ -105,6 +105,8 @@ import 'package:intl/intl.dart';
 import 'package:sqflite_login_app/common/colors.dart';
 import 'package:sqflite_login_app/common/common_text_style.dart';
 import 'package:sqflite_login_app/database/database_helper.dart';
+import 'package:sqflite_login_app/firebase_helper/fcm_notification_helper.dart';
+import 'package:sqflite_login_app/firebase_helper/local_notification_helper.dart';
 import '../common/common_widgets.dart';
 import '../common/input.dart';
 import '../modal/task_modal.dart';
@@ -123,7 +125,6 @@ class _HomeScreenState extends State<HomeScreen> {
   TextEditingController titleController = TextEditingController();
   TextEditingController descriptionController = TextEditingController();
   TextEditingController remainController = TextEditingController();
-  final ExpansionTileController _remainExpansionTileController = ExpansionTileController();
   String updatedText = '';
   String descUpdatedText = '';
   String remainUpdatedText = '';
@@ -135,37 +136,10 @@ class _HomeScreenState extends State<HomeScreen> {
   void initState() {
     super.initState();
     Future.delayed(Duration(seconds:  2),(){_loadTasksForDate(selectedDate);});
+    FcmNotificationHelper.fcmNotificationHelper.initFcm();
+    LocalNotificationHelper.localNotificationHelper.initLocalNotifications();
   }
 
-  // Load tasks for a specific date from the database
-  // Future<void> _loadTasksForDate(DateTime date) async {
-  //   setState(() {
-  //     isLoading = true;
-  //   });
-  //
-  //   try {
-  //     // Format date as 'yMd' to match your addTaskList() usage
-  //     String dateString = DateFormat.yMd().format(date);
-  //     List<TaskModal> fetchedTasks = await DatabaseHelper.databaseHelper.getTasks(dateString);
-  //     print("fetchedTasksfetchedTasks: $fetchedTasks");
-  //
-  //     setState(() {
-  //       tasks = fetchedTasks;
-  //       isLoading = false;
-  //     });
-  //   } catch (e) {
-  //     setState(() {
-  //       isLoading = false;
-  //     });
-  //     ScaffoldMessenger.of(context).showSnackBar(
-  //       SnackBar(
-  //         content: Text("Error loading tasks: $e"),
-  //         backgroundColor: Colors.red,
-  //       ),
-  //     );
-  //     print("Error loading tasks: $e");
-  //   }
-  // }
   Future<void> _loadTasksForDate(DateTime date) async {
     setState(() {
       isLoading = true;
@@ -201,26 +175,7 @@ class _HomeScreenState extends State<HomeScreen> {
         child: Scaffold(
           backgroundColor: Colors.white,
           appBar: _appBar(),
-          floatingActionButton: Padding(
-            padding: EdgeInsets.only(left: 35.r),
-            child: CommonWidgets.commonButtons(
-              name: "Create new",
-              widget: Padding(
-                padding: EdgeInsets.only(right: 3.r),
-                child: Icon(Icons.add, color: Colors.white, size: 22.h),
-              ),
-              boxColor: CommonColor.navyBlueColor,
-              height: 40.h,
-              width: MediaQuery.of(context).size.width / 2.9,
-              color: Colors.white,
-              fontWeight: FontWeight.w700,
-              onTap: () {
-                Navigator.pushNamed(context, 'create_new_list').then((_) {
-                  _loadTasksForDate(selectedDate);
-                });
-              },
-            ),
-          ),
+          floatingActionButton: _createNewTaskFloatingActionButton(),
           body: Padding(
             padding: EdgeInsets.only(left: 10.r, right: 10.r, top: 0.r, bottom: 15.r),
             child: Column(
@@ -229,55 +184,29 @@ class _HomeScreenState extends State<HomeScreen> {
                 // _taskStatusCard(),
                 SizedBox(height: 15.h,),
                 _dateAndDayTitle(),
-                Container(
-                  margin: EdgeInsets.only(top: 10.r),
-                  child: DatePicker(
-                    DateTime.now(),
-                    initialSelectedDate: selectedDate,
-                    height: 100.h,
-                    width: 80.w,
-                    selectionColor: CommonColor.navyBlueColor,
-                    selectedTextColor: Colors.white,
-                    dateTextStyle: CommonTextStyle.textStyle(fontSize: 22.sp, fontWeight: FontWeight.w600),
-                    dayTextStyle: CommonTextStyle.textStyle(fontSize: 12.sp, fontWeight: FontWeight.w700),
-                    monthTextStyle: CommonTextStyle.textStyle(fontSize: 12.sp, fontWeight: FontWeight.w700),
-                    onDateChange: (date) {
-                      setState(() {
-                        selectedDate = date;
-                      });
-                      _loadTasksForDate(date);
-                    },
-                  ),
-                ),
+                _selectedDateAndDay(),
                 SizedBox(height: 10.h),
                 Expanded(
-                  child: isLoading
-                      ? Center(child: CircularProgressIndicator(color: CommonColor.navyBlueColor))
-                      : tasks.isEmpty
-                      ? Center(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Image.asset("assets/images/note.png",height: 70.h,width: 70.w,color: CommonColor.navyBlueColor,),
-                        SizedBox(height: 16.h),
-                        Text("No tasks for this date.", style: CommonTextStyle.textStyle(fontSize: 18.sp,fontWeight: FontWeight.w700,color: CommonColor.navyBlueColor),),
-                        SizedBox(height: 8.h),
-                        Text("'Create new' to add one!", style: CommonTextStyle.textStyle(fontSize: 14.sp,fontWeight: FontWeight.w700,color: Colors.grey
-                        ),),
-                      ],
-                    ),
-                  )
+                  child: isLoading ? Center(child: CircularProgressIndicator(color: CommonColor.navyBlueColor)) : tasks.isEmpty
+                      ? Center(child: _emptyTaskTitleAndImage())
                       : ListView.builder(
                     itemCount: tasks.length,
                     itemBuilder: (context, index) {
                       TaskModal task = tasks[index];
+                      print("taskkk: ${task.toMap()}");
+                      // DateTime date = DateFormat.jm().parse(task.startTime.toString());
+                      DateTime date = DateFormat.Hm().parse(task.startTime.toString());
+                      final myTime = DateFormat("HH:mm").format(date);
+                      print("Mytime: $myTime");
+                       // LocalNotificationHelper.localNotificationHelper.scheduleNotification(
+                       //    int.parse(myTime.toString().split(":")[0]),
+                       //    int.parse(myTime.toString().split(":")[1]),
+                       //    task);
                       return AnimationConfiguration.staggeredList(
                           position: index,
                           child: SlideAnimation(
                               verticalOffset: 50.0,
-                              child: FadeInAnimation(
-                                  child: _buildTaskCard(task, index)
-                              )
+                              child: FadeInAnimation(child: _buildTaskCard(task, index))
                           )
                       );
                     },
@@ -320,35 +249,27 @@ class _HomeScreenState extends State<HomeScreen> {
                 padding: EdgeInsets.all(16.r),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
                   children: [
-                    Row(
-                      children: [
-                        Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Flexible(
-                              child: Text(
-                                task.title ?? updatedText, style: CommonTextStyle.textStyle(fontSize: 18.sp, fontWeight: FontWeight.w700, color: Colors.white,),
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                              ),
-                            ),
-                            if (task.description?.isNotEmpty == true)
-                              Padding(
-                                padding: EdgeInsets.only(top: 3.h),
-                                child: Flexible(
-                                  child: Text(
-                                    task.description!,
-                                    style: CommonTextStyle.textStyle(fontSize: 16.sp, fontWeight: FontWeight.w600, color: Colors.white,),
-                                    maxLines: 1,
-                                    overflow: TextOverflow.ellipsis,
-                                  ),
-                                ),
-                              ),
-                          ],
-                        )],
+                    Flexible(
+                      child: Text(
+                        task.title ?? updatedText, style: CommonTextStyle.textStyle(fontSize: 18.sp, fontWeight: FontWeight.w700, color: Colors.white,),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
                     ),
+                    if (task.description?.isNotEmpty == true)
+                      Padding(
+                        padding: EdgeInsets.only(top: 3.h),
+                        child: Flexible(
+                          child: Text(
+                            task.description!,
+                            style: CommonTextStyle.textStyle(fontSize: 16.sp, fontWeight: FontWeight.w600, color: Colors.white,),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                      ),
                     if (task.startTime?.isNotEmpty == true || task.endTime?.isNotEmpty == true)
                       Padding(
                         padding: EdgeInsets.only(top: 8.h),
@@ -435,8 +356,10 @@ class _HomeScreenState extends State<HomeScreen> {
           padding: EdgeInsets.only(right: 15.r),
           child: InkWell(
             onTap: () {
-              DatabaseHelper.databaseHelper.logoutUser ();
-              Navigator.pushNamedAndRemoveUntil(context, 'login_screen', (route) => false);
+              // DatabaseHelper.databaseHelper.logoutUser ();
+              // Navigator.pushNamedAndRemoveUntil(context, 'login_screen', (route) => false);
+              LocalNotificationHelper.localNotificationHelper.showSimpleNotification(id: "Todo App", title: "This is Todo App");
+
             },
             child: Image.asset(
               "assets/images/profile.png",
@@ -469,6 +392,46 @@ class _HomeScreenState extends State<HomeScreen> {
           _getDayTitle(selectedDate),
           style: CommonTextStyle.textStyle(fontSize: 22.sp, fontWeight: FontWeight.w700,color: CommonColor.navyBlueColor),
         ),
+      ],
+    );
+  }
+
+  //----------------------------selectedDate and days------------------------------
+  _selectedDateAndDay(){
+    return Container(
+      margin: EdgeInsets.only(top: 10.r),
+      child: DatePicker(
+        DateTime.now(),
+        initialSelectedDate: selectedDate,
+        height: 100.h,
+        width: 80.w,
+        selectionColor: CommonColor.navyBlueColor,
+        selectedTextColor: Colors.white,
+        dateTextStyle: CommonTextStyle.textStyle(fontSize: 22.sp, fontWeight: FontWeight.w600),
+        dayTextStyle: CommonTextStyle.textStyle(fontSize: 12.sp, fontWeight: FontWeight.w700),
+        monthTextStyle: CommonTextStyle.textStyle(fontSize: 12.sp, fontWeight: FontWeight.w700),
+        onDateChange: (date) {
+          setState(() {
+            selectedDate = date;
+          });
+          _loadTasksForDate(date);
+
+        },
+      ),
+    );
+  }
+
+  //----------------------------empty task title and image-------------------------
+  _emptyTaskTitleAndImage(){
+    return Column(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        Image.asset("assets/images/note.png",height: 70.h,width: 70.w,color: CommonColor.navyBlueColor,),
+        SizedBox(height: 16.h),
+        Text("No tasks for this date.", style: CommonTextStyle.textStyle(fontSize: 18.sp,fontWeight: FontWeight.w700,color: CommonColor.navyBlueColor),),
+        SizedBox(height: 8.h),
+        Text("'Create new' to add one!", style: CommonTextStyle.textStyle(fontSize: 14.sp,fontWeight: FontWeight.w700,color: Colors.grey
+        ),),
       ],
     );
   }
@@ -527,6 +490,7 @@ class _HomeScreenState extends State<HomeScreen> {
       });
   }
 
+  //----------------------------bottomSheet buttons-------------------------------
   _bottomSheetButtons({
     required String label,
     required GestureTapCallback onTap,
@@ -535,16 +499,41 @@ class _HomeScreenState extends State<HomeScreen> {
     bool isCloseSheet = false,
     required Border border,
   }) {
+
     return Padding(
       padding:  EdgeInsets.only(left: 15.r,right: 15.r,top: 15.r),
       child: CommonWidgets.commonButtons(name: label, widget: Container(),boxColor: isCloseSheet ? Colors.red.shade500 : color,color: textColor,fontWeight: FontWeight.w700,fontSize: 16.sp,width: MediaQuery.of(context).size.width,height: 45.h,onTap: onTap,border: border),
     );
   }
 
-  // Helper to get "Today", "Tomorrow", etc.
+  //----------------------------get date------------------------------------------
   String _getDayTitle(DateTime date) {
-    // if (date.isToday()) return "Today"; // Add extension if needed: date.isToday() => date.difference(DateTime.now()).inDays == 0
-    if (date.difference(DateTime.now()).inDays == 1) return "Tomorrow";
-    return DateFormat.EEEE().format(date); // e.g., "Monday"
+    // if (date.difference(DateTime.now()).inDays == 1) return "Today";
+    // if (date.difference(DateTime.now()).inDays == 1) return "Tomorrow";
+    return DateFormat.EEEE().format(date);
+  }
+
+  //----------------------------create new task floatingAction button--------------
+  _createNewTaskFloatingActionButton(){
+    return Padding(
+      padding: EdgeInsets.only(left: 35.r),
+      child: CommonWidgets.commonButtons(
+        name: "Create new",
+        widget: Padding(
+          padding: EdgeInsets.only(right: 3.r),
+          child: Icon(Icons.add, color: Colors.white, size: 22.h),
+        ),
+        boxColor: CommonColor.navyBlueColor,
+        height: 40.h,
+        width: MediaQuery.of(context).size.width / 2.9,
+        color: Colors.white,
+        fontWeight: FontWeight.w700,
+        onTap: () {
+          Navigator.pushNamed(context, 'create_new_list').then((_) {
+            _loadTasksForDate(selectedDate);
+          });
+        },
+      ),
+    );
   }
 }

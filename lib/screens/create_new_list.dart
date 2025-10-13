@@ -27,7 +27,7 @@ class _CreateNewListState extends State<CreateNewList> {
   final ExpansionTileController _repeatExpansionTileController = ExpansionTileController();
   DateTime selectedDate = DateTime.now();
   String startTime = DateFormat("hh:mm a").format(DateTime.now()).toString();
-  String endTime = '7:00';
+  String endTime = '7:00 PM';
   String remainTime = '5 minutes early';
   bool isExpanded = false;
   List<String> remainingTime = ["5 minutes early","10 minutes early", "15 minutes early", "20 minutes early","25 minutes early" ,"30 minutes early" ,"35 minutes early" ,"40 minutes early" ,"45 minutes early", "50 minutes early" ,"55 minutes early", "60 minutes early"];
@@ -141,10 +141,12 @@ class _CreateNewListState extends State<CreateNewList> {
     }else if(isStartTime == true){
      setState(() {
        startTime = formatTime;
+       print("startTime: $startTime");
      });
     }else if(isStartTime == false){
       setState(() {
         endTime = formatTime;
+        print("endTime: $endTime");
       });
     }
   }
