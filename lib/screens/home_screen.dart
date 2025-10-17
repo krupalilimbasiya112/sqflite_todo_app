@@ -97,18 +97,27 @@
 //   }
 // }
 
+import 'package:animate_do/animate_do.dart';
 import 'package:date_picker_timeline/date_picker_timeline.dart';
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:flutter_slider_drawer/flutter_slider_drawer.dart';
 import 'package:flutter_staggered_animations/flutter_staggered_animations.dart';
+
+import 'package:hive/hive.dart';
+import 'package:hive_flutter/hive_flutter.dart';
 import 'package:intl/intl.dart';
+import 'package:lottie/lottie.dart';
 import 'package:sqflite_login_app/common/colors.dart';
 import 'package:sqflite_login_app/common/common_text_style.dart';
+import 'package:sqflite_login_app/common/input.dart';
 import 'package:sqflite_login_app/database/database_helper.dart';
 import 'package:sqflite_login_app/firebase_helper/fcm_notification_helper.dart';
 import 'package:sqflite_login_app/firebase_helper/local_notification_helper.dart';
+import 'package:sqflite_login_app/modal/todo_service.dart';
+import 'package:sqflite_login_app/screens/create_new_list.dart';
 import '../common/common_widgets.dart';
-import '../common/input.dart';
 import '../modal/task_modal.dart';
 
 class HomeScreen extends StatefulWidget {
@@ -119,6 +128,7 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
+  GlobalKey<SliderDrawerState> sliderDrawerKey = GlobalKey<SliderDrawerState>();
   DateTime selectedDate = DateTime.now();
   List<TaskModal> tasks = [];
   bool isLoading = true;
@@ -135,9 +145,37 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   void initState() {
     super.initState();
-    Future.delayed(Duration(seconds:  2),(){_loadTasksForDate(selectedDate);});
+    // Future.delayed(Duration(seconds:  2),(){_loadTasksForDate(selectedDate);});
+    Future.delayed(Duration(seconds:  2),(){loadTodo();});
+    // TodoService.todoService.getAllTask();
     FcmNotificationHelper.fcmNotificationHelper.initFcm();
+
+
     LocalNotificationHelper.localNotificationHelper.initLocalNotifications();
+  }
+
+  loadTodo()async{
+    setState(() {
+      isLoading = true;
+    });
+
+    try{
+      tasks = await TodoService.todoService.getAllTask();
+      setState(() {
+        isLoading = false;
+      });
+    }catch (e){
+      setState(() {
+        isLoading = false;
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text("Error loading tasks: $e"),
+          backgroundColor: Colors.red,
+        ),
+      );
+      print("Error loading tasks: $e");
+    }
   }
 
   Future<void> _loadTasksForDate(DateTime date) async {
@@ -173,48 +211,78 @@ class _HomeScreenState extends State<HomeScreen> {
       color: Colors.white,
       child: SafeArea(
         child: Scaffold(
-          backgroundColor: Colors.white,
-          appBar: _appBar(),
-          floatingActionButton: _createNewTaskFloatingActionButton(),
-          body: Padding(
-            padding: EdgeInsets.only(left: 10.r, right: 10.r, top: 0.r, bottom: 15.r),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+          // appBar: _appBar(),
+          body: SliderDrawer(
+            key: sliderDrawerKey,
+            appBar: SliderAppBar(
+              config: SliderAppBarConfig(
+                title: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text("Todo List", style: CommonTextStyle.textStyle(fontSize: 23.sp, fontWeight: FontWeight.w700,color: CommonColor.navyBlueColor),),
+                  ],
+                ),
+              ),
+            ),
+            sliderOpenSize: 185,
+            slider: Column(
               children: [
-                // _taskStatusCard(),
-                SizedBox(height: 15.h,),
-                _dateAndDayTitle(),
-                _selectedDateAndDay(),
-                SizedBox(height: 10.h),
-                Expanded(
-                  child: isLoading ? Center(child: CircularProgressIndicator(color: CommonColor.navyBlueColor)) : tasks.isEmpty
-                      ? Center(child: _emptyTaskTitleAndImage())
-                      : ListView.builder(
-                    itemCount: tasks.length,
-                    itemBuilder: (context, index) {
-                      TaskModal task = tasks[index];
-                      print("taskkk: ${task.toMap()}");
-                      // DateTime date = DateFormat.jm().parse(task.startTime.toString());
-                      DateTime date = DateFormat.Hm().parse(task.startTime.toString());
-                      final myTime = DateFormat("HH:mm").format(date);
-                      print("Mytime: $myTime");
-                       // LocalNotificationHelper.localNotificationHelper.scheduleNotification(
-                       //    int.parse(myTime.toString().split(":")[0]),
-                       //    int.parse(myTime.toString().split(":")[1]),
-                       //    task);
-                      return AnimationConfiguration.staggeredList(
-                          position: index,
-                          child: SlideAnimation(
-                              verticalOffset: 50.0,
-                              child: FadeInAnimation(child: _buildTaskCard(task, index))
-                          )
-                      );
+                Padding(
+                  padding: EdgeInsets.only(top: 30.r),
+                  child: InkWell(
+                    onTap: () {
+                      // DatabaseHelper.databaseHelper.logoutUser ();
+                      // Navigator.pushNamedAndRemoveUntil(context, 'login_screen', (route) => false);
+                      LocalNotificationHelper.localNotificationHelper.showSimpleNotification(id: "Todo App", title: "This is Todo App");
                     },
+                    child: Image.asset("assets/images/profile.png", height: 80.h, width: 80.w, color: const Color(0xff00224B),),
                   ),
                 ),
+                SizedBox(height: 10.h,),
+                Text("Krupali", style: CommonTextStyle.textStyle(fontSize: 20.sp, fontWeight: FontWeight.w700,color: CommonColor.navyBlueColor),),
               ],
             ),
+              child:  Padding(
+              padding: EdgeInsets.only(left: 10.r, right: 10.r, top: 0.r, bottom: 15.r),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // _taskStatusCard(),
+                  SizedBox(height: 15.h,),
+                  _dateAndDayTitle(),
+                  _selectedDateAndDay(),
+                  SizedBox(height: 10.h),
+                  Expanded(
+                    child:
+                    isLoading ? Center(child: CircularProgressIndicator(color: CommonColor.navyBlueColor)) : tasks.isEmpty
+                        ? Center(child: _emptyTaskTitleAndImage())
+                        : ListView.builder(
+                      itemCount: tasks.length,
+                      itemBuilder: (context, index) {
+                        TaskModal task = tasks[index];
+                        print("taskkk: ${task.toMap()}");
+                        // DateTime date = DateFormat.jm().parse(task.startTime.toString());
+                        DateTime date = DateFormat.Hm().parse(task.startTime.toString());
+                        final myTime = DateFormat("HH:mm").format(date);
+                        print("Mytime: $myTime");
+                         // LocalNotificationHelper.localNotificationHelper.scheduleNotification(
+                         //    int.parse(myTime.toString().split(":")[0]),
+                         //    int.parse(myTime.toString().split(":")[1]),
+                         //    task);  n
+                        return AnimationConfiguration.staggeredList(
+                            position: index,
+                            child: SlideAnimation(verticalOffset: 50.0, child: FadeInAnimation(child: _buildTaskCard(task, index)))
+                        );
+                      },
+                    ),
+                  ),
+                ],
+              ),
+            ),
           ),
+          backgroundColor: Colors.white,
+          floatingActionButton: _createNewTaskFloatingActionButton(),
+
         ),
       ),
     );
@@ -223,7 +291,8 @@ class _HomeScreenState extends State<HomeScreen> {
   // -------------------- individual task card with details ----------------------
   Widget _buildTaskCard(TaskModal task, int index,) {
     bool isCompleted = task.isCompleted == 1;
-    Color? taskColor = task.color;
+    // Color? taskColor = task.color;
+    // print("-----taskColor-----: ${taskColor}");
 
     return GestureDetector(
       onTap: (){
@@ -233,7 +302,8 @@ class _HomeScreenState extends State<HomeScreen> {
         margin: EdgeInsets.only(bottom: 12.r),
         height: 161,
         decoration: BoxDecoration(
-          color:taskColor,
+          // color: taskColor,
+          color: Colors.white,
           boxShadow: [BoxShadow(color: Colors.grey, offset: Offset(0, 2), blurRadius: 5, spreadRadius: 0,),],
           borderRadius: BorderRadius.all(Radius.circular(5.r)),
         ),
@@ -243,7 +313,8 @@ class _HomeScreenState extends State<HomeScreen> {
               width: 300,
               decoration: BoxDecoration(
                 borderRadius: BorderRadius.all(Radius.circular(5.r)),
-                color: taskColor,
+                // color: taskColor,
+                color: Colors.white38
               ),
               child:  Padding(
                 padding: EdgeInsets.all(16.r),
@@ -253,7 +324,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   children: [
                     Flexible(
                       child: Text(
-                        task.title ?? updatedText, style: CommonTextStyle.textStyle(fontSize: 18.sp, fontWeight: FontWeight.w700, color: Colors.white,),
+                        task.title ?? updatedText, style: CommonTextStyle.textStyle(fontSize: 18.sp, fontWeight: FontWeight.w700, color: Colors.black,),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                       ),
@@ -264,7 +335,7 @@ class _HomeScreenState extends State<HomeScreen> {
                         child: Flexible(
                           child: Text(
                             task.description!,
-                            style: CommonTextStyle.textStyle(fontSize: 16.sp, fontWeight: FontWeight.w600, color: Colors.white,),
+                            style: CommonTextStyle.textStyle(fontSize: 16.sp, fontWeight: FontWeight.w600, color: Colors.black,),
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                           ),
@@ -275,11 +346,11 @@ class _HomeScreenState extends State<HomeScreen> {
                         padding: EdgeInsets.only(top: 8.h),
                         child: Row(
                           children: [
-                            Icon(Icons.access_time, size: 15.5.h, color: Colors.white),
+                            Icon(Icons.access_time, size: 15.5.h, color: Colors.black),
                             SizedBox(width: 4.w),
                             Text(
                               "${task.startTime ?? ''} - ${task.endTime ?? ''}",
-                              style: CommonTextStyle.textStyle(fontSize: 13.5.sp, color: Colors.white,fontWeight: FontWeight.w600),
+                              style: CommonTextStyle.textStyle(fontSize: 13.5.sp, color: Colors.black,fontWeight: FontWeight.w600),
                             ),
                           ],
                         ),
@@ -289,11 +360,11 @@ class _HomeScreenState extends State<HomeScreen> {
                         padding: EdgeInsets.only(top: 6.h),
                         child: Row(
                           children: [
-                            Icon(Icons.notifications, size: 17.h, color: Colors.white),
+                            Icon(Icons.notifications, size: 17.h, color: Colors.black),
                             SizedBox(width: 4.w),
                             Text(
                               "Remind: ${task.remind}",
-                              style: CommonTextStyle.textStyle(fontSize: 13.sp, color: Colors.white,fontWeight: FontWeight.w600),
+                              style: CommonTextStyle.textStyle(fontSize: 13.sp, color: Colors.black,fontWeight: FontWeight.w600),
                             ),
                           ],
                         ),
@@ -303,11 +374,11 @@ class _HomeScreenState extends State<HomeScreen> {
                         padding: EdgeInsets.only(top: 6.h),
                         child: Row(
                           children: [
-                            Icon(Icons.repeat, size: 16.h, color: Colors.white),
+                            Icon(Icons.repeat, size: 16.h, color: Colors.black),
                             SizedBox(width: 4.w),
                             Text(
                               "Repeat: ${task.repeat}",
-                              style: CommonTextStyle.textStyle(fontSize: 13.sp, color: Colors.white,fontWeight: FontWeight.w600),
+                              style: CommonTextStyle.textStyle(fontSize: 13.sp, color: Colors.black,fontWeight: FontWeight.w600),
                             ),
                           ],
                         ),
@@ -325,13 +396,12 @@ class _HomeScreenState extends State<HomeScreen> {
                   Container(
                     height: 100,
                     width: 0.9,
-                    color: Colors.white,
+                    color: Colors.black,
                   ),
-                  SizedBox(width: 10.w
-                    ,),
+                  SizedBox(width: 10.w),
                   RotatedBox(
                       quarterTurns: 3,
-                    child:  Text(task.isCompleted == 1 ? "COMPLETED" : "TODO",style: CommonTextStyle.textStyle(color: Colors.white,fontWeight: FontWeight.w600),) ),
+                    child:  Text(task.isCompleted == 1 ? "COMPLETED" : "TODO",style: CommonTextStyle.textStyle(color: Colors.black,fontWeight: FontWeight.w600),) ),
                 ],
               ),
             ),
@@ -414,8 +484,8 @@ class _HomeScreenState extends State<HomeScreen> {
           setState(() {
             selectedDate = date;
           });
-          _loadTasksForDate(date);
-
+          // _loadTasksForDate(date);
+          loadTodo();
         },
       ),
     );
@@ -425,12 +495,22 @@ class _HomeScreenState extends State<HomeScreen> {
   _emptyTaskTitleAndImage(){
     return Column(
       mainAxisAlignment: MainAxisAlignment.center,
+
       children: [
-        Image.asset("assets/images/note.png",height: 70.h,width: 70.w,color: CommonColor.navyBlueColor,),
-        SizedBox(height: 16.h),
-        Text("No tasks for this date.", style: CommonTextStyle.textStyle(fontSize: 18.sp,fontWeight: FontWeight.w700,color: CommonColor.navyBlueColor),),
+        // Image.asset("assets/images/note.png",height: 70.h,width: 70.w,color: CommonColor.navyBlueColor,),
+        FadeIn(
+          child: Lottie.asset(
+            'assets/images/Notes Document.json',
+            height: 160,
+            width: 150,
+            animate: isLoading ? false: true,
+            fit: BoxFit.cover,
+          ),
+        ),
+        // SizedBox(height: 16.h),
+        Text("No tasks for this date.", style: CommonTextStyle.textStyle(fontSize: 19.sp,fontWeight: FontWeight.w700,color: CommonColor.navyBlueColor),),
         SizedBox(height: 8.h),
-        Text("'Create new' to add one!", style: CommonTextStyle.textStyle(fontSize: 14.sp,fontWeight: FontWeight.w700,color: Colors.grey
+        Text("'Create new' to add one!", style: CommonTextStyle.textStyle(fontSize: 15.sp,fontWeight: FontWeight.w700,color: Colors.grey
         ),),
       ],
     );
@@ -438,11 +518,13 @@ class _HomeScreenState extends State<HomeScreen> {
   
   //---------------------------show task status card-------------------------------
   _showModalBottomSheet(BuildContext context, TaskModal task,int index) async{
+    // Color? taskColor = task.color;
+    // print("taskColor: ${taskColor}");
     String dateString = DateFormat.yMd().format(selectedDate);
       return showModalBottomSheet(context: context, builder: (context){
         return Container(
           padding: EdgeInsets.only(top: 6.r),
-          height: task.isCompleted == 1 ? MediaQuery.of(context).size.height * 0.24: MediaQuery.of(context).size.height * 0.32,
+          height: task.isCompleted == 1 ? MediaQuery.of(context).size.height * 0.32: MediaQuery.of(context).size.height * 0.40,
           width: MediaQuery.of(context).size.width,
           child: Column(
             children: [
@@ -451,19 +533,20 @@ class _HomeScreenState extends State<HomeScreen> {
                 width: 120.w,
                 decoration: BoxDecoration(borderRadius: BorderRadius.all(Radius.circular(10.r)),color: Colors.grey.shade400),
               ),
-              SizedBox(height: 30.h,),
+              SizedBox(height: 25.h,),
               task.isCompleted == 1
               ? Container() :
               _bottomSheetButtons(
                 onTap: () async{
-                  await DatabaseHelper.databaseHelper.completedTaskStatus(task.id ?? 0);
+                  // await DatabaseHelper.databaseHelper.completedTaskStatus(task.id ?? 0);
+                  await TodoService.todoService.updateTakStatus(task, index);
                   final taskIndex = tasks.indexWhere((element) => element.id == task.id);
                   if(taskIndex != -1){
                     setState(() {
                       tasks[taskIndex].isCompleted = 1;
                     });
                   }
-                  await DatabaseHelper.databaseHelper.getTasks(dateString);
+                  // await DatabaseHelper.databaseHelper.getTasks(dateString);
                   Navigator.pop(context);
                 },
                 label: "Task Completed",
@@ -471,10 +554,20 @@ class _HomeScreenState extends State<HomeScreen> {
                 border: Border.all(style: BorderStyle.none),
                 textColor: Colors.white,
               ),
+              _bottomSheetButtons(
+                onTap: () async{
+                  Navigator.pop(context);
+                  _showEditBottomSheet(task,index);
+                },
+                label: "Edit Task",
+                color: CommonColor.navyBlueColor,
+                border: Border.all(style: BorderStyle.none),
+                textColor: Colors.white,
+              ),
               SizedBox(height: 0.h,),
               _bottomSheetButtons(onTap: (){
-                DatabaseHelper.databaseHelper.deleteTask(task.id ?? 0);
-                print("tasppppp=====");
+                // DatabaseHelper.databaseHelper.deleteTask(task.id ?? 0);
+                TodoService.todoService.deleteTask(index);
                 setState(() {
                   tasks.removeAt(index);
                 });
@@ -483,11 +576,73 @@ class _HomeScreenState extends State<HomeScreen> {
               SizedBox(height: 15.h,),
               _bottomSheetButtons(onTap: (){Navigator.pop(context);},label: "Cancel",color: Colors.transparent,border: Border.all(color: CommonColor.navyBlueColor),textColor: CommonColor.navyBlueColor),
             ],
-
           ),
-
         );
       });
+  }
+
+  _showEditBottomSheet(TaskModal task,int index)async{
+    titleController = TextEditingController(text: task.title ?? '');
+    descriptionController = TextEditingController(text: task.description ?? '');
+    return showModalBottomSheet(
+        context: context,
+        builder: (context){
+          return Container(
+            height: MediaQuery.of(context).size.height * 0.45,
+            width: MediaQuery.of(context).size.width,
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.all(Radius.circular(20.r)),
+            ),
+            child: Column(
+              children: [
+                Container(
+                  margin: EdgeInsets.only(top: 8),
+                  height: 4.h,
+                  width: 120.w,
+                  decoration: BoxDecoration(borderRadius: BorderRadius.all(Radius.circular(10.r)),color: Colors.grey.shade400),
+                ),
+                SizedBox(height: 18.h,),
+                Text("Edit Task",style: CommonTextStyle.textStyle(fontWeight: FontWeight.w700,fontSize: 20.sp),),
+                CommonInputField(
+                    controller: titleController,
+                    hintText: "Enter title",
+                    title: "Title",
+                ),
+                SizedBox(height: 15.h,),
+                CommonInputField(
+                  controller: descriptionController,
+                  hintText: "Enter description",
+                  title: "description",
+                ),
+                SizedBox(height: 35.h,),
+                Padding(
+                  padding: EdgeInsets.only(left: 12, right: 12),
+                  child: CommonWidgets.commonButtons(
+                    name: "Edit task",
+                    widget: Container(),
+                    fontWeight: FontWeight.w700,
+                    color: Colors.white,
+                    boxColor: CommonColor.navyBlueColor,
+                    width: MediaQuery.of(context).size.width,
+                    height: 45.h,
+                    onTap: () async{
+                     setState(() {
+                       task.title = titleController.text;
+                       task.description = descriptionController.text;
+                     });
+                      print("task.title: ${task.title}");
+                      print("task.description: ${task.description}");
+                      await TodoService.todoService.updateTakStatus(task,index);
+                      Navigator.pop(context, task);
+                    },
+                  ),
+                ),
+              ],
+            ),
+          );
+        }
+    );
   }
 
   //----------------------------bottomSheet buttons-------------------------------
@@ -529,8 +684,12 @@ class _HomeScreenState extends State<HomeScreen> {
         color: Colors.white,
         fontWeight: FontWeight.w700,
         onTap: () {
-          Navigator.pushNamed(context, 'create_new_list').then((_) {
-            _loadTasksForDate(selectedDate);
+          // Navigator.pushNamed(context, 'create_new_list').then((_) {
+          //   _loadTasksForDate(selectedDate);
+          // });
+          Navigator.push(context, CupertinoPageRoute(builder: (context){ return CreateNewList();})).then((_){
+            // _loadTasksForDate(selectedDate);
+            loadTodo();
           });
         },
       ),

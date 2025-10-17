@@ -7,6 +7,7 @@ import 'package:sqflite_login_app/common/common_widgets.dart';
 import 'package:sqflite_login_app/common/input.dart';
 import 'package:sqflite_login_app/database/database_helper.dart';
 import 'package:sqflite_login_app/modal/task_modal.dart';
+import 'package:sqflite_login_app/modal/todo_service.dart';
 import '../common/common_text_style.dart';
 
 class CreateNewList extends StatefulWidget {
@@ -34,6 +35,7 @@ class _CreateNewListState extends State<CreateNewList> {
   String repeatTask = "None";
   List<String> repeatTaskList = ["None", "Daily", "Weekly", "Monthly"];
   bool isTaskExpanded = false;
+  List<TaskModal> tasks = [];
   // Color selectedColor = Colors.white;
 
   //  addTaskList() async {
@@ -66,10 +68,21 @@ class _CreateNewListState extends State<CreateNewList> {
   //     ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Task added failed...",style: CommonTextStyle.whiteTitleTextStyle(fontWeight: FontWeight.w600,fontSize: 14.sp),),backgroundColor: Colors.red,));
   //   }
   // }
+  @override
+  void initState() {
+    // TODO: implement initState
+    loadTodo();
+    super.initState();
+  }
+  loadTodo()async{
+    tasks = await TodoService.todoService.getAllTask();
+    setState(() {
 
+    });
+  }
   Color selectedColor = Colors.white;
 
-  Future<void> addTaskList() async {
+  Future<dynamic> addTaskList() async {
 
     TaskModal taskModal = TaskModal(
       title: titleController.text,
@@ -78,25 +91,32 @@ class _CreateNewListState extends State<CreateNewList> {
       date: DateFormat.yMd().format(selectedDate),
       startTime: startTime ?? '',
       endTime: endTime ?? '',
-      color: selectedColor,
+      // color: selectedColor,
       remind: remainTime,
       repeat: repeatTask ?? '',
+      isTaskCompleted: false
     );
 
     print("taskModal map (with optional id): ${taskModal.toMap()}");
 
-    int? result = await DatabaseHelper.databaseHelper.addTask(taskModal);
-    print("Final result (row ID): $result");
-
-    if (result != null && result > 0) {
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Task added successfully! (ID: $result)", style: CommonTextStyle.textStyle(fontWeight: FontWeight.w600, fontSize: 14.sp, color: Colors.white),), backgroundColor: CommonColor.navyBlueColor,),);
-      Navigator.pushNamed(context, 'home_screen',arguments: taskModal);
-      titleController.clear();
-      descriptionController.clear();
-      dateController.clear();
-    } else {
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Failed to add task. Please try again.", style: CommonTextStyle.textStyle(fontWeight: FontWeight.w600, fontSize: 14.sp,color: Colors.white),), backgroundColor: Colors.red,),);
-    }
+    // int? result = await DatabaseHelper.databaseHelper.addTask(taskModal);
+     TodoService.todoService.addTask(taskModal);
+    // print("Final result (row ID): $result");
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Task added successfully", style: CommonTextStyle.textStyle(fontWeight: FontWeight.w600, fontSize: 14.sp, color: Colors.white),), backgroundColor: CommonColor.navyBlueColor,),);
+    // loadTodo();
+    Navigator.pushNamed(context, 'home_screen',arguments: taskModal);
+    titleController.clear();
+    descriptionController.clear();
+    dateController.clear();
+    // if (result != null ) {
+    //   ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Task added successfully! (ID: $result)", style: CommonTextStyle.textStyle(fontWeight: FontWeight.w600, fontSize: 14.sp, color: Colors.white),), backgroundColor: CommonColor.navyBlueColor,),);
+    //   Navigator.pushNamed(context, 'home_screen',arguments: taskModal);
+    //   titleController.clear();
+    //   descriptionController.clear();
+    //   dateController.clear();
+    // } else {
+    //   ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Failed to add task. Please try again.", style: CommonTextStyle.textStyle(fontWeight: FontWeight.w600, fontSize: 14.sp,color: Colors.white),), backgroundColor: Colors.red,),);
+    // }
   }
 
 

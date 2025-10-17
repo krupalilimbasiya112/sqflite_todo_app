@@ -2,6 +2,9 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:hive/hive.dart';
+import 'package:hive_flutter/hive_flutter.dart';
+import 'package:path_provider/path_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sqflite_login_app/database/database_helper.dart';
 import 'package:sqflite_login_app/firebase_helper/fcm_notification_helper.dart';
@@ -14,8 +17,14 @@ import 'package:sqflite_login_app/screens/start_Screen.dart';
 import 'firebase_helper/local_notification_helper.dart';
 import 'package:timezone/data/latest_all.dart' as tz;
 
+import 'modal/task_modal.dart';
+
 void main()async{
-  WidgetsFlutterBinding.ensureInitialized();
+   WidgetsFlutterBinding.ensureInitialized();
+   await Hive.initFlutter();
+   Hive.registerAdapter(TaskModalAdapter());
+   final document = await getApplicationDocumentsDirectory();
+   await Hive.initFlutter(document.path);
   await LocalNotificationHelper.localNotificationHelper.initLocalNotifications();
   tz.initializeTimeZones();
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
